@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DSE 2026 考試倒計時</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","PingFang HK","Microsoft JhengHei",sans-serif;background:#0a0a0a;color:#e0e0e0;min-height:100vh;overflow-x:hidden}
+
+/* ====== TOP BAR ====== */
+.top-bar{display:flex;justify-content:space-between;align-items:center;padding:14px 20px;position:sticky;top:0;background:rgba(10,10,10,0.88);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);z-index:100;border-bottom:1px solid #1a1a1a}
+.top-bar h1{font-size:1.2rem;font-weight:800;color:#fff;letter-spacing:1px}
+.top-bar .sub{font-size:0.68rem;color:#444;margin-top:1px}
+.mode-toggle{display:flex;background:#141414;border:1px solid #252525;border-radius:10px;overflow:hidden}
+.mode-btn{padding:7px 15px;font-size:0.78rem;cursor:pointer;border:none;background:transparent;color:#555;font-weight:600;transition:all 0.25s;font-family:inherit}
+.mode-btn.active{background:#3b82f6;color:#fff}
+.mode-btn:hover:not(.active){color:#999}
+
+.view-wrap{padding:16px 20px 40px}
+
+/* ====== TRANSITIONS ====== */
+.view-section{animation:fadeUp 0.35s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* ====== COUNTDOWN VIEW ====== */
+.cd-bar{display:flex;gap:14px;margin-bottom:28px;flex-wrap:wrap;justify-content:center}
+.cd-box{background:#141414;border:1px solid #222;border-radius:14px;padding:16px 22px;flex:1;min-width:250px;max-width:440px;text-align:center}
+.cd-box .lb{font-size:0.72rem;color:#666;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:4px}
+.cd-box .hint{font-size:0.82rem;color:#999;margin-bottom:6px}
+.cd-box .val{font-size:1.65rem;font-weight:800;font-variant-numeric:tabular-nums;color:#fff;letter-spacing:0.5px}
+.cd-box.type-next{border-color:#3b82f6;background:linear-gradient(145deg,#0f1525,#111a30)}
+.cd-box.type-next .val{color:#60a5fa}
+.cd-box.type-end{border-color:#22c55e;background:linear-gradient(145deg,#0a150a,#0d1f0d)}
+.cd-box.type-end .val{color:#4ade80}
+
+.exam-list{max-width:680px;margin:0 auto;display:flex;flex-direction:column;gap:10px}
+
+/* --- Cards --- */
+.card{background:#141414;border:1px solid #222;border-radius:12px;padding:16px 20px;position:relative;overflow:hidden;transition:all 0.4s ease;border-left:4px solid #333}
+.card.is-next{padding:20px 22px;border-color:#3b82f6;border-left-color:#3b82f6;background:linear-gradient(145deg,#0f1525,#111a30);box-shadow:0 4px 24px rgba(59,130,246,0.08)}
+.card.is-active{border-color:#f59e0b;border-left-color:#f59e0b;background:linear-gradient(145deg,#1a170e,#1f1a0a)}
+.card.upcoming{border-left-color:#6366f1}
+.card.done{opacity:0.35;border-color:#1a1a1a;border-left-color:#333;background:#111}
+
+.card-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
+.card-name{font-size:1rem;font-weight:700;color:#fff}
+.card.is-next .card-name{font-size:1.15rem}
+.card.done .card-name{color:#555}
+.card-name .en{font-weight:400;font-size:0.78rem;color:#555;margin-left:6px}
+.badge{font-size:0.65rem;padding:3px 10px;border-radius:20px;font-weight:700;white-space:nowrap;margin-left:8px}
+.badge-next{background:#1e3a5f;color:#60a5fa}
+.badge-active{background:#3f2e0a;color:#fbbf24}
+.badge-upcoming{background:#1e1e3f;color:#a5b4fc}
+.badge-done{background:#1a1a1a;color:#444}
+
+.card-meta{display:flex;gap:14px;flex-wrap:wrap;font-size:0.78rem;color:#777;margin-bottom:8px}
+.card.done .card-meta{color:#444}
+.papers{display:flex;flex-direction:column;gap:4px}
+.p-row{display:flex;justify-content:space-between;align-items:center;font-size:0.78rem;color:#888;background:rgba(255,255,255,0.025);padding:5px 10px;border-radius:6px}
+.card.done .p-row{color:#444;background:rgba(255,255,255,0.01)}
+.p-name{font-weight:600;min-width:90px}
+.p-time{font-variant-numeric:tabular-nums;flex:1;text-align:center}
+.p-dur{color:#555;font-size:0.72rem;text-align:right;min-width:65px}
+.card-cd{font-size:0.82rem;color:#a5b4fc;margin-top:8px;font-variant-numeric:tabular-nums}
+.card.is-next .card-cd{font-size:0.9rem;color:#60a5fa}
+.card.done .card-cd{color:#333}
+.dot{width:6px;height:6px;border-radius:50%;display:inline-block;margin-right:4px}
+.dot-blue{background:#3b82f6;box-shadow:0 0 6px #3b82f6}
+.dot-yellow{background:#f59e0b;box-shadow:0 0 6px #f59e0b}
+.divider-done{text-align:center;color:#282828;font-size:0.72rem;margin:10px 0 4px;letter-spacing:3px}
+
+/* ====== CALENDAR VIEW ====== */
+.cal-legend{display:flex;justify-content:center;gap:14px;flex-wrap:wrap;margin-bottom:14px}
+.cal-legend .lg{display:flex;align-items:center;gap:5px;font-size:0.72rem;color:#777}
+.cal-legend .lg i{width:10px;height:10px;border-radius:3px;display:block}
+
+.cal-controls{display:flex;justify-content:center;align-items:center;gap:12px;margin-bottom:6px}
+.cal-nav{background:transparent;border:1px solid #2a2a2a;color:#aaa;border-radius:8px;width:34px;height:34px;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s}
+.cal-nav:hover{background:#1a1a1a;border-color:#444}
+.cal-nav:disabled{opacity:0.25;cursor:default}
+.cal-nav:disabled:hover{background:transparent;border-color:#2a2a2a}
+.cal-week-title{text-align:center;min-width:200px}
+.cal-week-title .main{font-size:0.95rem;font-weight:700;color:#fff}
+.cal-week-title .info{font-size:0.7rem;color:#555;margin-top:2px}
+
+.cal-dots{display:flex;justify-content:center;gap:6px;margin-bottom:16px}
+.cal-dots .wd{width:8px;height:8px;border-radius:50%;background:#1a1a1a;transition:all 0.25s;cursor:pointer}
+.cal-dots .wd.has{background:#2a2a4a}
+.cal-dots .wd.cur{background:#3b82f6;box-shadow:0 0 6px rgba(59,130,246,0.4)}
+
+.cal-wrapper{max-width:880px;margin:0 auto;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.cal-inner{min-width:620px}
+
+/* Header row */
+.cal-hdr{display:flex;border-bottom:1px solid #1e1e1e}
+.cal-hdr .gutter{flex:0 0 48px}
+.cal-hdr .days{flex:1;display:flex}
+.cal-hdr .dh{flex:1;text-align:center;padding:8px 0}
+.cal-hdr .dh .dn{font-size:0.72rem;color:#555;font-weight:600}
+.cal-hdr .dh .dd{font-size:0.85rem;color:#666;margin-top:2px;font-weight:700;width:28px;height:28px;line-height:28px;margin:2px auto 0;border-radius:50%}
+.cal-hdr .dh.today .dn{color:#60a5fa}
+.cal-hdr .dh.today .dd{background:#3b82f6;color:#fff}
+.cal-hdr .dh.has-exam .dn{color:#ccc}
+
+/* Body row */
+.cal-body{display:flex}
+.cal-body .gutter{flex:0 0 48px;position:relative}
+.cal-body .gutter .tl{position:absolute;right:6px;font-size:0.62rem;color:#383838;transform:translateY(-50%);font-variant-numeric:tabular-nums}
+.cal-area{flex:1;position:relative;overflow:hidden}
+
+.cal-area .hl{position:absolute;left:0;right:0;height:1px;background:#161616;pointer-events:none}
+.cal-area .hl.full{background:#1c1c1c}
+.cal-area .vl{position:absolute;top:0;bottom:0;width:1px;background:#161616;pointer-events:none}
+
+.cal-ev{position:absolute;border-radius:5px;padding:3px 6px;overflow:hidden;cursor:default;display:flex;flex-direction:column;justify-content:center;border-left:3px solid;transition:opacity 0.3s;z-index:2}
+.cal-ev:hover{z-index:5;filter:brightness(1.15)}
+.cal-ev .en{font-size:0.72rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3}
+.cal-ev .et{font-size:0.62rem;opacity:0.75;font-variant-numeric:tabular-nums;line-height:1.3}
+.cal-ev .ed{font-size:0.58rem;opacity:0.55;line-height:1.3}
+
+.c-chi{background:rgba(99,102,241,0.14);border-left-color:rgba(99,102,241,0.7);color:#b4bffc}
+.c-eng{background:rgba(59,130,246,0.14);border-left-color:rgba(59,130,246,0.7);color:#93c5fd}
+.c-math{background:rgba(16,185,129,0.14);border-left-color:rgba(16,185,129,0.7);color:#6ee7b7}
+.c-ict{background:rgba(245,158,11,0.14);border-left-color:rgba(245,158,11,0.7);color:#fcd34d}
+.c-econ{background:rgba(236,72,153,0.14);border-left-color:rgba(236,72,153,0.7);color:#f9a8d4}
+
+.cal-now{position:absolute;left:0;right:0;height:2px;background:#ef4444;z-index:10;pointer-events:none}
+.cal-now::before{content:'';position:absolute;left:-5px;top:-4px;width:10px;height:10px;border-radius:50%;background:#ef4444}
+
+.cal-empty{text-align:center;color:#2a2a2a;padding:80px 20px;font-size:0.9rem}
+
+.hidden{display:none!important}
+@media(max-width:600px){.top-bar{padding:10px 14px}.top-bar h1{font-size:1.05rem}.mode-btn{padding:6px 11px;font-size:0.72rem}.view-wrap{padding:12px 12px 32px}.cd-box .val{font-size:1.35rem}.card.is-next{padding:16px 18px}}
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <div><h1>DSE 2026</h1><div class="sub">考試倒計時</div></div>
+  <div class="mode-toggle">
+    <button class="mode-btn active" id="btnCd" onclick="go('cd')">倒計時</button>
+    <button class="mode-btn" id="btnCal" onclick="go('cal')">日曆</button>
+  </div>
+</div>
+
+<div class="view-wrap">
+  <div id="vCd" class="view-section">
+    <div class="cd-bar">
+      <div class="cd-box type-next"><div class="lb">距離下一場</div><div class="hint" id="nHint">—</div><div class="val" id="nVal">--</div></div>
+      <div class="cd-box type-end"><div class="lb">距離 DSE 結束</div><div class="hint" id="eHint">—</div><div class="val" id="eVal">--</div></div>
+    </div>
+    <div class="exam-list" id="examList"></div>
+  </div>
+  <div id="vCal" class="view-section hidden">
+    <div class="cal-legend">
+      <div class="lg"><i style="background:#6366f1"></i>中文</div>
+      <div class="lg"><i style="background:#3b82f6"></i>英文</div>
+      <div class="lg"><i style="background:#10b981"></i>數學</div>
+      <div class="lg"><i style="background:#f59e0b"></i>ICT</div>
+      <div class="lg"><i style="background:#ec4899"></i>經濟</div>
+    </div>
+    <div class="cal-controls">
+      <button class="cal-nav" id="calP" onclick="wk(-1)">‹</button>
+      <div class="cal-week-title" id="calTitle"></div>
+      <button class="cal-nav" id="calN" onclick="wk(1)">›</button>
+    </div>
+    <div class="cal-dots" id="calDots"></div>
+    <div class="cal-wrapper" id="calTouch">
+      <div class="cal-inner">
+        <div class="cal-hdr" id="calHdr"></div>
+        <div class="cal-body" id="calBody"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============ DATA ============
+const SUBJECTS = [
+  {
+    id:'chi', name:'中國語文', en:'Chinese', color:'c-chi',
+    papers:[
+      {label:'卷一 閱讀', start:'2026-04-09T08:30', end:'2026-04-09T10:00', dur:90},
+      {label:'卷二 寫作', start:'2026-04-09T10:45', end:'2026-04-09T13:00', dur:135}
+    ]
+  },
+  {
+    id:'eng', name:'英國語文', en:'English', color:'c-eng',
+    papers:[
+      {label:'卷一 Reading', start:'2026-04-10T08:30', end:'2026-04-10T10:00', dur:90},
+      {label:'卷二 Writing', start:'2026-04-10T11:00', end:'2026-04-10T13:00', dur:120},
+      {label:'卷三 Listening', start:'2026-04-11T09:15', end:'2026-04-11T12:10', dur:175}
+    ]
+  },
+  {
+    id:'math', name:'數學（必修）', en:'Math', color:'c-math',
+    papers:[
+      {label:'卷一', start:'2026-04-13T08:30', end:'2026-04-13T10:45', dur:135},
+      {label:'卷二', start:'2026-04-13T11:30', end:'2026-04-13T12:45', dur:75}
+    ]
+  },
+  {
+    id:'ict', name:'資訊及通訊科技', en:'ICT', color:'c-ict',
+    papers:[
+      {label:'卷一', start:'2026-04-24T08:30', end:'2026-04-24T10:30', dur:120},
+      {label:'卷二', start:'2026-04-24T11:15', end:'2026-04-24T12:45', dur:90}
+    ]
+  },
+  {
+    id:'econ', name:'經濟', en:'Economics', color:'c-econ',
+    papers:[
+      {label:'卷一', start:'2026-05-04T08:30', end:'2026-05-04T09:30', dur:60},
+      {label:'卷二', start:'2026-05-04T10:15', end:'2026-05-04T12:45', dur:150}
+    ]
+  }
+];
+
+// Flat paper sessions
+const PAPERS = [];
+SUBJECTS.forEach(s => s.papers.forEach(p => {
+  PAPERS.push({sid:s.id, sname:s.name, sen:s.en, color:s.color, label:p.label, start:new Date(p.start), end:new Date(p.end), dur:p.dur});
+}));
+PAPERS.sort((a,b) => a.start - b.start);
+
+const DSE_END = new Date('2026-05-04T12:45');
+
+// ============ HELPERS ============
+const pad = n => String(n).padStart(2,'0');
+const DAYNAMES = ['一','二','三','四','五','六','日'];
+
+function fmtCD(ms){
+  if(ms<=0) return '已結束';
+  const s=Math.floor(ms/1000), d=Math.floor(s/86400), h=Math.floor((s%86400)/3600), m=Math.floor((s%3600)/60), sc=s%60;
+  return d>0 ? `${d}天 ${pad(h)}:${pad(m)}:${pad(sc)}` : `${pad(h)}:${pad(m)}:${pad(sc)}`;
+}
+function fmtDur(min){
+  const h=Math.floor(min/60), m=min%60;
+  if(h&&m) return `${h}h${m}m`;
+  return h ? `${h}h` : `${m}m`;
+}
+function fmtDurLong(min){
+  const h=Math.floor(min/60), m=min%60;
+  if(h&&m) return `${h}小時${m}分鐘`;
+  return h ? `${h}小時` : `${m}分鐘`;
+}
+function fmtTime(d){ return pad(d.getHours())+':'+pad(d.getMinutes()); }
+
+function getDateRange(subj){
+  const dates = [...new Set(subj.papers.map(p => new Date(p.start).toDateString()))].map(d=>new Date(d)).sort((a,b)=>a-b);
+  const f = d => `${d.getMonth()+1}月${d.getDate()}日`;
+  const dayN = d => '星期'+DAYNAMES[(d.getDay()+6)%7];
+  if(dates.length===1) return `${f(dates[0])}（${dayN(dates[0])}）`;
+  return `${f(dates[0])}–${dates[dates.length-1].getDate()}日（${dayN(dates[0])}–${dayN(dates[dates.length-1])}）`;
+}
+
+// Paper-level status
+function nextPaper(now){
+  const active = PAPERS.find(p => now>=p.start && now<p.end);
+  if(active) return {type:'active', p:active};
+  const up = PAPERS.find(p => p.start>now);
+  if(up) return {type:'upcoming', p:up};
+  return null;
+}
+
+// Subject-level status
+function subjStatus(subj, now){
+  const allDone = subj.papers.every(p => now >= new Date(p.end));
+  if(allDone) return 'done';
+  const anyActive = subj.papers.some(p => now >= new Date(p.start) && now < new Date(p.end));
+  if(anyActive) return 'active';
+  return 'upcoming';
+}
+
+function subjNextPaperStart(subj, now){
+  for(const p of subj.papers){
+    const s=new Date(p.start);
+    if(s>now) return s;
+  }
+  return null;
+}
+function subjLastEnd(subj){
+  return new Date(subj.papers[subj.papers.length-1].end);
+}
+
+// ============ VIEW SWITCH ============
+let curView = 'cd';
+function go(v){
+  curView=v;
+  document.getElementById('vCd').classList.toggle('hidden',v!=='cd');
+  document.getElementById('vCal').classList.toggle('hidden',v!=='cal');
+  document.getElementById('btnCd').classList.toggle('active',v==='cd');
+  document.getElementById('btnCal').classList.toggle('active',v==='cal');
+  // Re-trigger animation
+  const el=document.getElementById(v==='cd'?'vCd':'vCal');
+  el.style.animation='none'; el.offsetHeight; el.style.animation='';
+  tick();
+}
+
+// ============ COUNTDOWN VIEW ============
+function renderCD(){
+  const now=new Date();
+  const np=nextPaper(now);
+
+  // Top bar - next session
+  const nH=document.getElementById('nHint'), nV=document.getElementById('nVal');
+  if(np){
+    if(np.type==='active'){
+      nH.textContent=`${np.p.sname} · ${np.p.label}（考試中）`;
+      nV.textContent='距結束 '+fmtCD(np.p.end-now);
+    } else {
+      nH.textContent=`${np.p.sname} · ${np.p.label}`;
+      nV.textContent=fmtCD(np.p.start-now);
+    }
+  } else {
+    nH.textContent='全部完成 🎉';
+    nV.textContent='00:00:00';
+  }
+
+  // Top bar - DSE end
+  const eH=document.getElementById('eHint'), eV=document.getElementById('eVal');
+  const eMs=DSE_END-now;
+  eH.textContent='經濟卷二結束';
+  eV.textContent=fmtCD(eMs);
+
+  // Cards
+  const items = SUBJECTS.map(s=>({...s, st:subjStatus(s,now)}));
+  // Sort: active first, then next upcoming, then rest upcoming, then done
+  const nextUp = np && np.type==='upcoming' ? np.p.sid : null;
+  const activeId = np && np.type==='active' ? np.p.sid : null;
+
+  items.sort((a,b)=>{
+    const order = s => {
+      if(s.st==='active') return 0;
+      if(s.st==='upcoming' && s.id===nextUp) return 1;
+      if(s.st==='upcoming') return 2;
+      return 3;
+    };
+    return order(a)-order(b);
+  });
+
+  let html='', doneSep=false;
+  items.forEach(s=>{
+    const isNext = s.st==='upcoming' && s.id===nextUp;
+    const isActive = s.st==='active';
+    let cls='card', bCls='', bTxt='';
+
+    if(s.st==='done'){
+      if(!doneSep){html+='<div class="divider-done">── 已完成 ──</div>';doneSep=true;}
+      cls+=' done'; bCls='badge-done'; bTxt='已完成';
+    } else if(isActive){
+      cls+=' is-active is-next'; bCls='badge-active'; bTxt='考試中';
+    } else if(isNext){
+      cls+=' upcoming is-next'; bCls='badge-next'; bTxt='下一科';
+    } else {
+      cls+=' upcoming'; bCls='badge-upcoming'; bTxt='即將';
+    }
+
+    const totalDur = s.papers.reduce((a,p)=>a+p.dur,0);
+
+    html+=`<div class="${cls}">
+      <div class="card-top"><div class="card-name">${s.name}<span class="en">${s.en}</span></div><span class="badge ${bCls}">${bTxt}</span></div>
+      <div class="card-meta"><span>📅 ${getDateRange(s)}</span><span>⏱ 總時長 ${fmtDurLong(totalDur)}</span></div>
+      <div class="papers">`;
+
+    s.papers.forEach(p=>{
+      const ps=new Date(p.start), pe=new Date(p.end);
+      html+=`<div class="p-row"><span class="p-name">${p.label}</span><span class="p-time">${fmtTime(ps)}–${fmtTime(pe)}</span><span class="p-dur">${fmtDurLong(p.dur)}</span></div>`;
+    });
+    html+='</div>';
+
+    // Per-card countdown
+    if(s.st==='done'){
+      html+='<div class="card-cd">✓ 已完成</div>';
+    } else if(isActive){
+      const curP = s.papers.find(p=> now>=new Date(p.start) && now<new Date(p.end));
+      if(curP) html+=`<div class="card-cd"><span class="dot dot-yellow"></span>${curP.label} 距結束 ${fmtCD(new Date(curP.end)-now)}</div>`;
+    } else {
+      const ns = subjNextPaperStart(s,now);
+      if(ns) html+=`<div class="card-cd">${isNext?'<span class="dot dot-blue"></span>':''}距開考 ${fmtCD(ns-now)}</div>`;
+    }
+    html+='</div>';
+  });
+  document.getElementById('examList').innerHTML=html;
+}
+
+// ============ CALENDAR VIEW ============
+const WEEKS=[];
+(function(){
+  let d=new Date('2026-04-06');
+  const end=new Date('2026-05-11');
+  while(d<end){
+    const s=new Date(d), e=new Date(d); e.setDate(e.getDate()+6); e.setHours(23,59,59,999);
+    const has=PAPERS.some(p=>p.start>=s && p.start<=e);
+    const count=PAPERS.filter(p=>p.start>=s && p.start<=e).length;
+    WEEKS.push({start:s,end:e,has,count});
+    d.setDate(d.getDate()+7);
+  }
+})();
+
+let wIdx=0;
+// Auto-select best week
+(function(){
+  const now=new Date();
+  // Week containing today
+  let found=-1;
+  for(let i=0;i<WEEKS.length;i++){if(now>=WEEKS[i].start&&now<=WEEKS[i].end){found=i;break;}}
+  if(found>=0){wIdx=found;return;}
+  // Next week with exams
+  for(let i=0;i<WEEKS.length;i++){if(WEEKS[i].has&&WEEKS[i].start>now){wIdx=i;return;}}
+  // First with exams
+  for(let i=0;i<WEEKS.length;i++){if(WEEKS[i].has){wIdx=i;return;}}
+})();
+
+function wk(d){wIdx=Math.max(0,Math.min(WEEKS.length-1,wIdx+d));renderCal();}
+
+function renderCal(){
+  const w=WEEKS[wIdx], now=new Date();
+  const H0=8, H1=13.5, TH=H1-H0, PPH=100, CH=TH*PPH;
+
+  // Title
+  const t=document.getElementById('calTitle');
+  const f=d=>`${d.getMonth()+1}月${d.getDate()}日`;
+  t.innerHTML=`<div class="main">${f(w.start)} — ${f(w.end)}</div><div class="info">${w.has?w.count+'場考試':'本週無考試'}</div>`;
+
+  // Nav buttons
+  document.getElementById('calP').disabled=wIdx<=0;
+  document.getElementById('calN').disabled=wIdx>=WEEKS.length-1;
+
+  // Dots
+  let dots='';
+  WEEKS.forEach((ww,i)=>{
+    const cls='wd'+(ww.has?' has':'')+(i===wIdx?' cur':'');
+    dots+=`<div class="${cls}" onclick="wIdx=${i};renderCal()"></div>`;
+  });
+  document.getElementById('calDots').innerHTML=dots;
+
+  // Week events
+  const evts=PAPERS.filter(p=>p.start>=w.start&&p.start<=w.end);
+
+  // Header
+  let hdr='<div class="gutter"></div><div class="days">';
+  for(let i=0;i<7;i++){
+    const d=new Date(w.start); d.setDate(d.getDate()+i);
+    const isT=d.toDateString()===now.toDateString();
+    const hasE=evts.some(e=>e.start.toDateString()===d.toDateString());
+    hdr+=`<div class="dh${isT?' today':''}${hasE?' has-exam':''}"><div class="dn">星期${DAYNAMES[i]}</div><div class="dd">${d.getDate()}</div></div>`;
+  }
+  hdr+='</div>';
+  document.getElementById('calHdr').innerHTML=hdr;
+
+  // Body
+  let body=`<div class="gutter" style="height:${CH}px">`;
+  for(let h=H0;h<=Math.floor(H1);h++){
+    const top=((h-H0)/TH)*CH;
+    body+=`<div class="tl" style="top:${top}px">${pad(h)}:00</div>`;
+  }
+  body+=`</div><div class="cal-area" style="height:${CH}px">`;
+
+  // Hour lines
+  for(let h=H0;h<=H1;h+=0.5){
+    const top=((h-H0)/TH)*100;
+    body+=`<div class="hl${h===Math.floor(h)?' full':''}" style="top:${top}%"></div>`;
+  }
+  // Day separators
+  for(let i=1;i<7;i++) body+=`<div class="vl" style="left:${(i/7)*100}%"></div>`;
+
+  // Events
+  const DW=100/7, EP=0.5;
+  evts.forEach(ev=>{
+    const di=(ev.start.getDay()+6)%7;
+    const sh=ev.start.getHours()+ev.start.getMinutes()/60;
+    const eh=ev.end.getHours()+ev.end.getMinutes()/60;
+    const top=((sh-H0)/TH)*100;
+    const height=((eh-sh)/TH)*100;
+    const left=di*DW+EP;
+    const width=DW-EP*2;
+    const hPx=(eh-sh)*PPH;
+    const showT=hPx>45, showD=hPx>75;
+
+    body+=`<div class="cal-ev ${ev.color}" style="top:${top}%;height:${height}%;left:${left}%;width:${width}%">
+      <div class="en">${ev.sname}</div>
+      ${showT?`<div class="et">${fmtTime(ev.start)}–${fmtTime(ev.end)}</div>`:''}
+      ${showD?`<div class="ed">${ev.label} · ${fmtDur(ev.dur)}</div>`:''}
+    </div>`;
+  });
+
+  // Now line
+  if(now>=w.start&&now<=w.end){
+    const nh=now.getHours()+now.getMinutes()/60;
+    if(nh>=H0&&nh<=H1){
+      body+=`<div class="cal-now" style="top:${((nh-H0)/TH)*100}%"></div>`;
+    }
+  }
+
+  if(evts.length===0) body+='<div class="cal-empty">📭 本週無考試安排</div>';
+  body+='</div>';
+  document.getElementById('calBody').innerHTML=body;
+}
+
+// ============ TOUCH / KEYBOARD ============
+(function(){
+  let sx=0, sy=0, swiping=false;
+  const el=document.getElementById('calTouch');
+  el.addEventListener('touchstart',e=>{sx=e.touches[0].clientX;sy=e.touches[0].clientY;swiping=true;},{passive:true});
+  el.addEventListener('touchend',e=>{
+    if(!swiping)return; swiping=false;
+    const dx=e.changedTouches[0].clientX-sx, dy=e.changedTouches[0].clientY-sy;
+    if(Math.abs(dx)>60&&Math.abs(dx)>Math.abs(dy)*1.5){
+      wk(dx>0?-1:1);
+    }
+  },{passive:true});
+  document.addEventListener('keydown',e=>{
+    if(curView!=='cal')return;
+    if(e.key==='ArrowLeft')wk(-1);
+    if(e.key==='ArrowRight')wk(1);
+  });
+})();
+
+// ============ MAIN LOOP ============
+function tick(){
+  if(curView==='cd') renderCD();
+  else renderCal();
+}
+tick();
+setInterval(tick,1000);
+</script>
+</body>
+</html>
